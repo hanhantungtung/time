@@ -24,10 +24,23 @@
       align-items: center;
     }
     
+    /* 將時間與柴犬放在同一行 */
+    .time-group {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    
     .time {
       font-size: 3.5rem;
       font-weight: bold;
       line-height: 1;
+    }
+    
+    /* 限制柴犬圖片的高度，與時間文字對齊 */
+    .shiba-img {
+      height: 75px;
+      object-fit: contain;
     }
     
     .weather {
@@ -40,7 +53,6 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 25px;
-      margin-bottom: 80px; /* 預留底部空間給柴犬 */
     }
     
     .card {
@@ -93,27 +105,16 @@
       font-style: italic;
       color: #333;
     }
-
-    /* 柴犬動畫設定 (經典發力版) */
-    .shiba-container {
-      position: fixed;
-      bottom: 12px;
-      right: 25px; /* 固定在右下角 */
-      z-index: 100;
-      /* 微微出力的震動感 */
-      animation: strain 0.4s infinite alternate ease-in-out;
-    }
-    
-    @keyframes strain {
-      0% { transform: translateY(0) scale(1); }
-      100% { transform: translateY(-1px) scale(0.98); }
-    }
   </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="time" id="current-time">--:--</div>
+  <!-- 時間與輪播柴犬區塊 -->
+  <div class="time-group">
+    <div class="time" id="current-time">--:--</div>
+    <img id="shiba-gif" class="shiba-img" src="b4394f63557d1599a92711dbfe6aa86d.gif" alt="Shiba Animation">
+  </div>
   <div class="weather" id="weather-text">載入天氣中...</div>
 </div>
 
@@ -141,37 +142,6 @@
       <div class="row status-text">載入中...</div>
     </div>
   </div>
-</div>
-
-<!-- 經典發力姿勢柴犬 -->
-<div class="shiba-container">
-  <svg class="shiba" viewBox="0 0 100 100" width="85" height="85">
-    <g fill="#000000">
-      <!-- 遠處的腳 -->
-      <path d="M 40 60 L 35 90 L 42 90 L 47 60 Z" />
-      <path d="M 72 60 C 72 75 80 85 80 90 L 72 90 C 72 80 65 70 65 60 Z" />
-      
-      <!-- 緊緊捲起的尾巴 -->
-      <path d="M 83 45 C 98 25 105 60 85 65" fill="none" stroke="#000000" stroke-width="9" stroke-linecap="round" />
-      
-      <!-- 拱起發力的身體 -->
-      <path d="M 28 35 
-               C 45 20 70 25 85 45 
-               C 95 55 90 75 75 75 
-               C 65 65 55 60 40 60
-               C 30 60 25 50 20 45 Z" />
-               
-      <!-- 近處的腳 (穩穩扎根) -->
-      <path d="M 30 55 L 25 90 L 33 90 L 38 55 Z" />
-      <path d="M 80 45 C 92 55 94 80 88 90 L 78 90 C 82 80 80 65 68 60 Z" />
-      
-      <!-- 專注的頭部與飛機耳 -->
-      <circle cx="28" cy="30" r="15" />
-      <path d="M 25 18 L 4 28 L 18 40 Z" />
-      <polygon points="18,20 12,2 28,15" />
-      <polygon points="30,16 40,3 38,20" />
-    </g>
-  </svg>
 </div>
 
 <script>
@@ -213,7 +183,24 @@ function updateTime() {
 }
 
 // ==========================================
-// 2. 天文台天氣模組 (每 15 分鐘更新)
+// 2. 柴犬 GIF 輪播模組 (每 15 秒切換)
+// ==========================================
+const shibaGifs = [
+  'b4394f63557d1599a92711dbfe6aa86d.gif', // 伸懶腰
+  '41d1bb477f18e8d77357da58d0aed9fe.gif', // 抓癢
+  '5b8c4b3492d01532489c4f4e71e17c44.gif'  // 甩毛
+];
+let shibaIndex = 0;
+const shibaImg = document.getElementById('shiba-gif');
+
+function rotateShiba() {
+  shibaIndex = (shibaIndex + 1) % shibaGifs.length;
+  shibaImg.src = shibaGifs[shibaIndex];
+}
+setInterval(rotateShiba, 15000); // 15000 毫秒 = 15 秒
+
+// ==========================================
+// 3. 天文台天氣模組 (每 15 分鐘更新)
 // ==========================================
 async function updateWeather() {
   try {
@@ -228,7 +215,7 @@ async function updateWeather() {
 }
 
 // ==========================================
-// 3. 港鐵輕鐵模組 (每分鐘更新)
+// 4. 港鐵輕鐵模組 (每分鐘更新)
 // ==========================================
 async function updateLRT() {
   try {
@@ -258,7 +245,7 @@ async function updateLRT() {
 }
 
 // ==========================================
-// 4. 港鐵屯馬綫模組 (每分鐘更新)
+// 5. 港鐵屯馬綫模組 (每分鐘更新)
 // ==========================================
 const tmlDestMap = { 'WKS': '烏溪沙', 'TUM': '屯門', 'HUH': '紅磡', 'NAC': '南昌', 'MEF': '美孚' };
 
@@ -295,7 +282,7 @@ async function updateTML() {
 }
 
 // ==========================================
-// 5. 巴士模組 (KMB、城巴)
+// 6. 巴士模組 (KMB、城巴)
 // ==========================================
 async function updateBuses() {
   const busDataContainer = document.getElementById('bus-data');
@@ -320,7 +307,6 @@ async function updateBuses() {
   };
 
   try {
-    // --- 1. 九巴 KMB ---
     const kmbRoutes = [
       { route: '261', seq: 10, dir: 'O', name: '九巴 261 (往 粉嶺)' },
       { route: '62X', seq: 7, dir: 'O', name: '九巴 62X (往 鯉魚門)' },
@@ -338,14 +324,12 @@ async function updateBuses() {
       } catch(e) {}
     }
 
-    // --- 2. 城巴 Citybus (雙向自動索取與目的地識別) ---
     const ctbRoutes = ['50', '56', 'B3A'];
     
     for (const route of ctbRoutes) {
       try {
         let etas = [];
         
-        // 同時獲取：003207 (往市區/上水) 及 003209 (往屯門)
         const [resOut, resIn] = await Promise.all([
           fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/eta/CTB/003207/${route}`).catch(()=>null),
           fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/eta/CTB/003209/${route}`).catch(()=>null)
