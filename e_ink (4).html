@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Ink 交通與天氣面板</title>
+  <style>
+    /* 專為 E-Ink 顯示器優化的純黑白樣式 */
+    body {
+      background-color: #ffffff;
+      color: #000000;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 15px;
+    }
+    
+    .header {
+      border: 4px solid #000000;
+      padding: 20px;
+      margin-bottom: 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .time {
+      font-size: 3.5rem;
+      font-weight: bold;
+      line-height: 1;
+    }
+    
+    .weather {
+      font-size: 1.5rem;
+      text-align: right;
+      font-weight: bold;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 25px;
+    }
+    
+    .card {
+      border: 4px solid #000000;
+      padding: 15px;
+    }
+    
+    .card h2 {
+      margin-top: 0;
+      border-bottom: 4px solid #000000;
+      padding-bottom: 10px;
+      font-size: 1.8rem;
+    }
+    
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 1.4rem;
+      border-bottom: 2px dashed #000000;
+      padding-bottom: 8px;
+    }
+    
+    .row:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    
+    .route-name {
+      font-weight: normal;
+    }
+    
+    .eta {
+      font-weight: bold;
+    }
+    
+    .sub-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-top: 15px;
+      margin-bottom: 10px;
+      background-color: #000000;
+      color: #ffffff;
+      padding: 4px 10px;
+      display: inline-block;
+    }
+
+    /* 錯誤或載入中的文字設定 */
+    .status-text {
+      font-style: italic;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 頂部：時間與天氣 -->
+<div class="header">
+  <div class="time" id="current-time">--:--</div>
+  <div class="weather" id="weather-text">載入天氣中...</div>
+</div>
+
+<!-- 主要內容網格 -->
+<div class="grid">
+  <!-- 輕鐵面板 -->
+  <div class="card">
+    <h2>輕鐵 (兆康)</h2>
+    <div id="lrt-data">
+      <div class="row status-text">載入中...</div>
+    </div>
+  </div>
+
+  <!-- 屯馬綫面板 -->
+  <div class="card">
+    <h2>屯馬綫 (兆康)</h2>
+    <div id="tml-data">
+      <div class="row status-text">載入中...</div>
+    </div>
+  </div>
+
+  <!-- 巴士面板 -->
+  <div class="card">
+    <h2>巴士 (兆康附近)</h2>
+    <div id="bus-data">
+      <div class="row status-text">載入中...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==========================================
+// 共用工具：計算 ETA 分鐘數
+// ==========================================
+function getMinutesEta(etaString) {
+  if (!etaString) return '-';
+  
+  // 處理輕鐵已經是相對時間的字串 (例如："1 分鐘", "即將抵達")
+  if (etaString.includes('分鐘') || etaString.includes('min') || 
+      etaString.includes('即將抵達') || etaString.includes('Arriving') || 
+      etaString.includes('離開') || etaString.includes('Departing')) {
+    return etaString; 
+  }
+  
+  // 處理 ISO 時間，確保兼容時區
+  let timeStr = etaString.replace(' ', 'T');
+  if (!timeStr.includes('+')) {
+    timeStr += '+08:00'; 
+  }
+  
+  const targetTime = new Date(timeStr);
+  const now = new Date();
+  const diffMs = targetTime - now;
+  
+  if (diffMs < 0) return '即將抵達';
+  
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins <= 0) return '即將抵達';
+  return diffMins + ' 分鐘';
+}
+
+// ==========================================
+// 1. 本地時間模組 (每秒更新)
+// ==========================================
+function updateTime() {
+  const now = new Date();
+  document.getElementById('current-time').innerText = 
+    now.toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+// ==========================================
+// 2. 天文台天氣模組 (每 15 分鐘更新)
+// ==========================================
+async function updateWeather() {
+  try {
+    const res = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
+    const data = await res.json();
+    const temp = data.temperature.data[0].value;
+    const hum = data.humidity.data[0].value;
+    document.getElementById('weather-text').innerHTML = `${temp}°C<br>${hum}% 濕度`;
+  } catch(e) {
+    console.error('Weather fetch error:', e);
+  }
+}
+
+// ==========================================
+// 3. 港鐵輕鐵模組 (每分鐘更新)
+// ==========================================
+async function updateLRT() {
+  try {
+    const res = await fetch('https://rt.data.gov.hk/v1/transport/mtr/lrt/getSchedule?station_id=100');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    
+    // MTR 狀態碼 0 代表系統提示 (如暫停服務或收車)
+    if(data.status !== 1) {
+      const msg = data.message || '暫無服務或已收車';
+      document.getElementById('lrt-data').innerHTML = `<div class="row status-text">${msg}</div>`;
+      return;
+    }
+    
+    let html = '';
+    // 防呆處理：確保 platform_list 存在
+    const platforms = data.platform_list || [];
+    
+    platforms.forEach(plat => {
+      const routes = plat.route_list || [];
+      routes.slice(0, 2).forEach(route => {
+         // 防止 API 回傳格式錯誤或遺失
+         const dest = route.dest_ch || route.dest_en || '未知';
+         const time = route.time_ch || route.time_en || '-';
+         const routeNo = route.route_no || '-';
+         
+         html += `<div class="row">
+           <span class="route-name">往 ${dest} (${routeNo})</span>
+           <span class="eta">${time}</span>
+         </div>`;
+      });
+    });
+    
+    if(!html) html = '<div class="row status-text">暫無班次資料</div>';
+    document.getElementById('lrt-data').innerHTML = html;
+  } catch(e) {
+    // 將詳細錯誤訊息顯示出來以方便查修 (例如 Kindle 網路異常)
+    document.getElementById('lrt-data').innerHTML = `<div class="row status-text">載入失敗: ${e.message}</div>`;
+  }
+}
+
+// ==========================================
+// 4. 港鐵屯馬綫 (前西鐵) 模組 (每分鐘更新)
+// ==========================================
+const tmlDestMap = { 'WKS': '烏溪沙', 'TUM': '屯門', 'HUH': '紅磡', 'NAC': '南昌', 'MEF': '美孚' };
+
+async function updateTML() {
+  try {
+    const res = await fetch('https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=TML&sta=SIH');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    
+    if(json.status !== 1) {
+      const msg = json.message || '暫無服務或已收車';
+      document.getElementById('tml-data').innerHTML = `<div class="row status-text">${msg}</div>`;
+      return;
+    }
+    
+    let html = '';
+    // 防呆處理：確保 data 存在且格式正確
+    const tmlData = (json.data && json.data['TML-SIH']) ? json.data['TML-SIH'] : null;
+    
+    if (tmlData) {
+      const processDir = (dirData) => {
+         if(!dirData || !Array.isArray(dirData) || dirData.length === 0) return;
+         dirData.slice(0, 2).forEach(train => {
+           const destName = tmlDestMap[train.dest] || train.dest || '未知';
+           const eta = getMinutesEta(train.time);
+           html += `<div class="row">
+             <span class="route-name">往 ${destName}</span>
+             <span class="eta">${eta}</span>
+           </div>`;
+         });
+      };
+      processDir(tmlData.UP);
+      processDir(tmlData.DOWN);
+    }
+    
+    if(!html) html = '<div class="row status-text">暫無班次資料</div>';
+    document.getElementById('tml-data').innerHTML = html;
+  } catch(e) {
+    document.getElementById('tml-data').innerHTML = `<div class="row status-text">載入失敗: ${e.message}</div>`;
+  }
+}
+
+// ==========================================
+// 5. 巴士 ETA 模組 (每分鐘更新)
+// ==========================================
+async function updateBuses() {
+  let fullHtml = '';
+  
+  // =====================================
+  // 1. KMB (九巴)
+  // =====================================
+  const kmbRoutes = [
+    { route: '261', seq: 10, dir: 'O', name: '261 (往 粉嶺)' },
+    { route: '62X', seq: 1, dir: 'O', name: '62X (往 鯉魚門邨)' },
+    { route: '258P', seq: 14, dir: 'O', name: '258P (往 藍田站)' }
+  ];
+  
+  const kmbPromises = kmbRoutes.map(r => 
+    fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${r.route}/1`)
+      .then(res => res.json())
+      .then(json => ({ json, routeInfo: r }))
+      .catch(() => ({ json: null, routeInfo: r }))
+  );
+
+  // =====================================
+  // 2. Citybus (城巴)
+  // =====================================
+  const ctbRoutes = [
+    { route: '50', stop: '003207', name: '50 (往 尖沙咀)' },
+    { route: 'B3A', stop: '003207', name: 'B3A (往 深圳灣)' }
+  ];
+  
+  const ctbPromises = ctbRoutes.map(r => 
+    fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/eta/CTB/${r.stop}/${r.route}`)
+      .then(res => res.json())
+      .then(json => ({ json, routeInfo: r }))
+      .catch(() => ({ json: null, routeInfo: r }))
+  );
+
+  // =====================================
+  // 3. MTR Bus (港鐵巴士)
+  // =====================================
+  const mtrBusPromise = fetch('https://rt.data.gov.hk/v1/transport/mtr/bus/getSchedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language: 'zh', routeName: 'K54' })
+    })
+    .then(res => res.json())
+    .catch(() => null);
+
+  // =====================================
+  // 等待所有 API 回應並渲染
+  // =====================================
+  const kmbResults = await Promise.all(kmbPromises);
+  const ctbResults = await Promise.all(ctbPromises);
+  const mtrBusData = await mtrBusPromise;
+
+  // 渲染 KMB
+  kmbResults.forEach(({json, routeInfo}) => {
+    fullHtml += `<div class="sub-title">九巴 ${routeInfo.name}</div>`;
+    if (json && json.data) {
+      const etas = json.data.filter(x => x.seq === routeInfo.seq && x.dir === routeInfo.dir && x.eta);
+      let count = 0;
+      etas.slice(0, 2).forEach(etaData => {
+        count++;
+        fullHtml += `<div class="row"><span class="route-name">下班車</span><span class="eta">${getMinutesEta(etaData.eta)}</span></div>`;
+      });
+      if (count === 0) fullHtml += `<div class="row status-text">暫無班次或已收車</div>`;
+    } else {
+      fullHtml += `<div class="row status-text">載入失敗</div>`;
+    }
+  });
+
+  // 渲染 Citybus
+  ctbResults.forEach(({json, routeInfo}) => {
+    fullHtml += `<div class="sub-title">城巴 ${routeInfo.name}</div>`;
+    if (json && json.data) {
+      const etas = json.data.filter(x => x.eta);
+      let count = 0;
+      etas.slice(0, 2).forEach(etaData => {
+        count++;
+        fullHtml += `<div class="row"><span class="route-name">下班車</span><span class="eta">${getMinutesEta(etaData.eta)}</span></div>`;
+      });
+      if (count === 0) fullHtml += `<div class="row status-text">暫無班次或已收車</div>`;
+    } else {
+      fullHtml += `<div class="row status-text">載入失敗</div>`;
+    }
+  });
+
+  // 渲染 MTR Bus K54
+  fullHtml += `<div class="sub-title">港鐵巴士 K54 (循環線)</div>`;
+  if (mtrBusData && mtrBusData.status === 1 && mtrBusData.busStop) {
+    const targetStop = mtrBusData.busStop.find(stop => stop.busStopName.includes('兆康'));
+    if (targetStop && targetStop.route && targetStop.route.length > 0) {
+       const busInfo = targetStop.route[0].busInfo || [];
+       let count = 0;
+       busInfo.slice(0, 2).forEach(bus => {
+         count++;
+         let etaText = bus.departureTimeInMinute;
+         if (!isNaN(etaText) && etaText.trim() !== '') etaText += ' 分鐘'; // 若為純數字則加上分鐘
+         if (etaText === '-' || !etaText) etaText = '即將抵達';
+         fullHtml += `<div class="row"><span class="route-name">${targetStop.busStopName} 發車</span><span class="eta">${etaText}</span></div>`;
+       });
+       if (count === 0) fullHtml += `<div class="row status-text">暫無班次或已收車</div>`;
+    } else {
+       fullHtml += `<div class="row status-text">暫無班次或已收車</div>`;
+    }
+  } else {
+    fullHtml += `<div class="row status-text">載入失敗 或 暫無服務</div>`;
+  }
+
+  document.getElementById('bus-data').innerHTML = fullHtml;
+}
+
+// ==========================================
+// 初始化與計時器管理
+// ==========================================
+updateTime();
+setInterval(updateTime, 1000); // 時鐘：每秒更新
+
+updateWeather();
+setInterval(updateWeather, 15 * 60 * 1000); // 天氣：每 15 分鐘 (900000ms)
+
+function updateTransports() {
+  updateLRT();
+  updateTML();
+  updateBuses();
+}
+updateTransports();
+setInterval(updateTransports, 60 * 1000); // 交通：每分鐘 (60000ms)
+
+</script>
+</body>
+</html>
