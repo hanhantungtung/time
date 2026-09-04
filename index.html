@@ -40,7 +40,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 25px;
-      margin-bottom: 60px; /* 預留底部空間給柴犬 */
+      margin-bottom: 80px; /* 預留底部空間給柴犬 */
     }
     
     .card {
@@ -94,31 +94,19 @@
       color: #333;
     }
 
-    /* 柴犬動畫設定 (悠閒慢走版) */
+    /* 柴犬動畫設定 (經典發力版) */
     .shiba-container {
       position: fixed;
       bottom: 12px;
-      left: -100px;
-      animation: walkAcross 40s linear infinite;
+      right: 25px; /* 固定在右下角 */
       z-index: 100;
+      /* 微微出力的震動感 */
+      animation: strain 0.4s infinite alternate ease-in-out;
     }
     
-    .shiba {
-      /* 步伐起伏放慢，營造悠閒散步感 */
-      animation: bob 0.8s infinite alternate ease-in-out;
-    }
-    
-    @keyframes walkAcross {
-      0% { transform: translateX(-100px) scaleX(-1); }
-      49% { transform: translateX(calc(100vw + 100px)) scaleX(-1); }
-      50% { transform: translateX(calc(100vw + 100px)) scaleX(1); }
-      99% { transform: translateX(-100px) scaleX(1); }
-      100% { transform: translateX(-100px) scaleX(-1); }
-    }
-    
-    @keyframes bob {
-      0% { transform: translateY(0); }
-      100% { transform: translateY(-2px); } 
+    @keyframes strain {
+      0% { transform: translateY(0) scale(1); }
+      100% { transform: translateY(-1px) scale(0.98); }
     }
   </style>
 </head>
@@ -155,28 +143,33 @@
   </div>
 </div>
 
-<!-- 全新設計：精緻幾何風柴犬 -->
+<!-- 經典發力姿勢柴犬 -->
 <div class="shiba-container">
-  <svg class="shiba" viewBox="0 0 100 100" width="75" height="75">
+  <svg class="shiba" viewBox="0 0 100 100" width="85" height="85">
     <g fill="#000000">
       <!-- 遠處的腳 -->
-      <rect x="35" y="55" width="7" height="22" rx="3.5" />
-      <rect x="70" y="55" width="7" height="22" rx="3.5" />
-      <!-- 標誌性柴犬捲尾巴 -->
-      <path d="M 75 45 C 95 30, 95 70, 75 55" fill="none" stroke="#000000" stroke-width="8" stroke-linecap="round" />
-      <!-- 結實的身體 -->
-      <rect x="25" y="35" width="55" height="28" rx="14" />
-      <!-- 近處的腳 -->
-      <rect x="23" y="55" width="9" height="26" rx="4.5" />
-      <rect x="60" y="55" width="9" height="26" rx="4.5" />
-      <!-- 圓潤厚實的脖子與頭部基底 -->
-      <circle cx="30" cy="35" r="16" />
-      <circle cx="22" cy="28" r="12" />
-      <!-- 狐狸般的口吻 -->
-      <path d="M 22 20 L 4 32 L 20 42 Z" />
-      <!-- 柴犬立耳 -->
-      <polygon points="20,25 15,4 32,20" />
-      <polygon points="32,22 42,6 38,25" />
+      <path d="M 40 60 L 35 90 L 42 90 L 47 60 Z" />
+      <path d="M 72 60 C 72 75 80 85 80 90 L 72 90 C 72 80 65 70 65 60 Z" />
+      
+      <!-- 緊緊捲起的尾巴 -->
+      <path d="M 83 45 C 98 25 105 60 85 65" fill="none" stroke="#000000" stroke-width="9" stroke-linecap="round" />
+      
+      <!-- 拱起發力的身體 -->
+      <path d="M 28 35 
+               C 45 20 70 25 85 45 
+               C 95 55 90 75 75 75 
+               C 65 65 55 60 40 60
+               C 30 60 25 50 20 45 Z" />
+               
+      <!-- 近處的腳 (穩穩扎根) -->
+      <path d="M 30 55 L 25 90 L 33 90 L 38 55 Z" />
+      <path d="M 80 45 C 92 55 94 80 88 90 L 78 90 C 82 80 80 65 68 60 Z" />
+      
+      <!-- 專注的頭部與飛機耳 -->
+      <circle cx="28" cy="30" r="15" />
+      <path d="M 25 18 L 4 28 L 18 40 Z" />
+      <polygon points="18,20 12,2 28,15" />
+      <polygon points="30,16 40,3 38,20" />
     </g>
   </svg>
 </div>
