@@ -248,7 +248,7 @@ async function updateTML() {
 }
 
 // ==========================================
-// 5. 巴士模組 (KMB、城巴、港鐵巴士)
+// 5. 巴士模組 (KMB、城巴) - 已移除 K54
 // ==========================================
 async function updateBuses() {
   const busDataContainer = document.getElementById('bus-data');
@@ -288,56 +288,48 @@ async function updateBuses() {
           .filter(x => x.seq === req.seq && x.dir === req.dir && x.eta)
           .map(x => x.eta);
         htmlContent += renderRoute(req.name, etas);
-      } catch(e) {
-        console.error('KMB error', e);
-      }
+      } catch(e) {}
     }
 
-    // --- 2. 城巴 Citybus ---
-    const ctbRoutes = [
-      { route: '50', name: '城巴 50 (往 尖沙咀)' },
-      { route: '56', name: '城巴 56 (往 上水)' },
-      { route: 'B3A', name: '城巴 B3A (往 深圳灣)' }
-    ];
+    // --- 2. 城巴 Citybus (雙向自動索取與目的地識別) ---
+    const ctbRoutes = ['50', '56', 'B3A'];
     
-    for (const req of ctbRoutes) {
+    for (const route of ctbRoutes) {
       try {
-        const res = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/eta/CTB/003207/${req.route}`);
-        const json = await res.json();
-        const etas = (json.data || []).filter(x => x.eta).map(x => x.eta);
-        htmlContent += renderRoute(req.name, etas);
-      } catch(e) {
-        console.error('CTB error', e);
-      }
-    }
-
-    // --- 3. 港鐵巴士 MTR Bus (K54) ---
-    try {
-      const mtrRes = await fetch('https://rt.data.gov.hk/v1/transport/mtr/bus/getSchedule', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language: 'zh' })
-      });
-      const mtrJson = await mtrRes.json();
-      let k54Etas = [];
-      
-      if (mtrJson.busStopList) {
-        mtrJson.busStopList.forEach(stop => {
-          if (stop.routeId === 'K54' && stop.busStopNameCh && stop.busStopNameCh.includes('兆康')) {
-            if (stop.busInfo) {
-              stop.busInfo.forEach(bus => {
-                if (bus.busDepartureTimeDesc) {
-                  k54Etas.push(bus.busDepartureTimeDesc);
-                }
-              });
-            }
-          }
+        let etas = [];
+        
+        // 同時獲取：003207 (往市區/上水) 及 003209 (往屯門)
+        const [resOut, resIn] = await Promise.all([
+          fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/eta/CTB/003207/${route}`).catch(()=>null),
+          fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/eta/CTB/003209/${route}`).catch(()=>null)
+        ]);
+        
+        if (resOut) {
+          const jsonOut = await resOut.json();
+          if (jsonOut.data) jsonOut.data.forEach(x => { if(x.eta) etas.push(x) });
+        }
+        if (resIn) {
+          const jsonIn = await resIn.json();
+          if (jsonIn.data) jsonIn.data.forEach(x => { if(x.eta) etas.push(x) });
+        }
+        
+        etas.sort((a, b) => new Date(a.eta) - new Date(b.eta));
+        
+        let html = `<div class="sub-title">城巴 ${route}</div>`;
+        let count = 0;
+        
+        etas.slice(0, 3).forEach(x => {
+          count++;
+          const displayStr = getMinutesEta(x.eta);
+          html += `<div class="row"><span class="route-name">往 ${x.dest_tc}</span><span class="eta">${displayStr}</span></div>`;
         });
-      }
-      htmlContent += renderRoute('港鐵巴士 K54 (兆康站)', k54Etas);
-    } catch(e) {
-      console.error('MTR Bus error', e);
-      htmlContent += `<div class="sub-title">港鐵巴士 K54 (兆康站)</div><div class="row status-text">載入失敗 (伺服器拒絕)</div>`;
+        
+        if (count === 0) {
+          html += `<div class="row status-text">暫無班次 / 已收車</div>`;
+        }
+        htmlContent += html;
+        
+      } catch(e) {}
     }
 
     busDataContainer.innerHTML = htmlContent;
