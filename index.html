@@ -12,6 +12,7 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       margin: 0;
       padding: 15px;
+      overflow-x: hidden;
     }
     
     .header {
@@ -39,6 +40,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 25px;
+      margin-bottom: 60px; /* 預留底部空間給柴犬 */
     }
     
     .card {
@@ -87,23 +89,23 @@
       display: inline-block;
     }
 
-    /* 錯誤或載入中的文字設定 */
     .status-text {
       font-style: italic;
       color: #333;
     }
-/* 柴犬動畫設定 */
+
+    /* 柴犬動畫設定 (悠閒慢走版) */
     .shiba-container {
       position: fixed;
-      bottom: 10px;
+      bottom: 12px;
       left: -100px;
-      animation: walkAcross 18s linear infinite;
+      animation: walkAcross 40s linear infinite;
       z-index: 100;
     }
     
     .shiba {
-      /* 走路時微微上下跳動的步伐感 */
-      animation: bob 0.3s infinite alternate ease-in-out;
+      /* 步伐起伏放慢，營造悠閒散步感 */
+      animation: bob 0.8s infinite alternate ease-in-out;
     }
     
     @keyframes walkAcross {
@@ -116,8 +118,8 @@
     
     @keyframes bob {
       0% { transform: translateY(0); }
-      100% { transform: translateY(-5px); }
-    } 
+      100% { transform: translateY(-2px); } 
+    }
   </style>
 </head>
 <body>
@@ -151,6 +153,32 @@
       <div class="row status-text">載入中...</div>
     </div>
   </div>
+</div>
+
+<!-- 全新設計：精緻幾何風柴犬 -->
+<div class="shiba-container">
+  <svg class="shiba" viewBox="0 0 100 100" width="75" height="75">
+    <g fill="#000000">
+      <!-- 遠處的腳 -->
+      <rect x="35" y="55" width="7" height="22" rx="3.5" />
+      <rect x="70" y="55" width="7" height="22" rx="3.5" />
+      <!-- 標誌性柴犬捲尾巴 -->
+      <path d="M 75 45 C 95 30, 95 70, 75 55" fill="none" stroke="#000000" stroke-width="8" stroke-linecap="round" />
+      <!-- 結實的身體 -->
+      <rect x="25" y="35" width="55" height="28" rx="14" />
+      <!-- 近處的腳 -->
+      <rect x="23" y="55" width="9" height="26" rx="4.5" />
+      <rect x="60" y="55" width="9" height="26" rx="4.5" />
+      <!-- 圓潤厚實的脖子與頭部基底 -->
+      <circle cx="30" cy="35" r="16" />
+      <circle cx="22" cy="28" r="12" />
+      <!-- 狐狸般的口吻 -->
+      <path d="M 22 20 L 4 32 L 20 42 Z" />
+      <!-- 柴犬立耳 -->
+      <polygon points="20,25 15,4 32,20" />
+      <polygon points="32,22 42,6 38,25" />
+    </g>
+  </svg>
 </div>
 
 <script>
@@ -274,7 +302,7 @@ async function updateTML() {
 }
 
 // ==========================================
-// 5. 巴士模組 (KMB、城巴) - 已移除 K54
+// 5. 巴士模組 (KMB、城巴)
 // ==========================================
 async function updateBuses() {
   const busDataContainer = document.getElementById('bus-data');
@@ -383,11 +411,5 @@ updateTransports();
 setInterval(updateTransports, 60 * 1000); 
 
 </script>
-<!-- 柴犬剪影動畫 -->
-<div class="shiba-container">
-  <svg class="shiba" viewBox="0 0 24 24" fill="#000000" width="60" height="60">
-    <path d="M19 6.5A1.5 1.5 0 0 0 17.5 5h-1a1.5 1.5 0 0 0-1.5 1.5v.675a3 3 0 0 1-.9.6l-2.6.866A3.01 3.01 0 0 0 10.15 10H8.5c-.83 0-1.5.67-1.5 1.5v1.23l-3.376.844c-.754.189-1.218.966-1.042 1.722L3.5 19.5a1 1 0 0 0 1 .5h1a1 1 0 0 0 1-.5l-.444-1.776L8 16v3.5a1 1 0 0 0 1 .5h1a1 1 0 0 0 1-.5v-3.5h2v3.5a1 1 0 0 0 1 .5h1a1 1 0 0 0 1-.5v-4l2.5-3.125a1 1 0 0 0 .2-.573V6.5z"/>
-  </svg>
-</div>
 </body>
 </html>
