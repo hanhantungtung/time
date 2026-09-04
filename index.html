@@ -92,6 +92,32 @@
       font-style: italic;
       color: #333;
     }
+/* 柴犬動畫設定 */
+    .shiba-container {
+      position: fixed;
+      bottom: 10px;
+      left: -100px;
+      animation: walkAcross 18s linear infinite;
+      z-index: 100;
+    }
+    
+    .shiba {
+      /* 走路時微微上下跳動的步伐感 */
+      animation: bob 0.3s infinite alternate ease-in-out;
+    }
+    
+    @keyframes walkAcross {
+      0% { transform: translateX(-100px) scaleX(-1); }
+      49% { transform: translateX(calc(100vw + 100px)) scaleX(-1); }
+      50% { transform: translateX(calc(100vw + 100px)) scaleX(1); }
+      99% { transform: translateX(-100px) scaleX(1); }
+      100% { transform: translateX(-100px) scaleX(-1); }
+    }
+    
+    @keyframes bob {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-5px); }
+    } 
   </style>
 </head>
 <body>
@@ -357,5 +383,11 @@ updateTransports();
 setInterval(updateTransports, 60 * 1000); 
 
 </script>
+<!-- 柴犬剪影動畫 -->
+<div class="shiba-container">
+  <svg class="shiba" viewBox="0 0 24 24" fill="#000000" width="60" height="60">
+    <path d="M19 6.5A1.5 1.5 0 0 0 17.5 5h-1a1.5 1.5 0 0 0-1.5 1.5v.675a3 3 0 0 1-.9.6l-2.6.866A3.01 3.01 0 0 0 10.15 10H8.5c-.83 0-1.5.67-1.5 1.5v1.23l-3.376.844c-.754.189-1.218.966-1.042 1.722L3.5 19.5a1 1 0 0 0 1 .5h1a1 1 0 0 0 1-.5l-.444-1.776L8 16v3.5a1 1 0 0 0 1 .5h1a1 1 0 0 0 1-.5v-3.5h2v3.5a1 1 0 0 0 1 .5h1a1 1 0 0 0 1-.5v-4l2.5-3.125a1 1 0 0 0 .2-.573V6.5z"/>
+  </svg>
+</div>
 </body>
 </html>
